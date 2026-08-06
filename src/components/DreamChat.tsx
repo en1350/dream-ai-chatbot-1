@@ -5,6 +5,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { FREE_DREAMS, useDreamWallet } from '@/hooks/use-dream-wallet';
 import { interpretDream } from '@/lib/oracle';
+import { getMoonInfo } from '@/lib/moon';
+import func2url from '../../backend/func2url.json';
+
+const API_URL = func2url.api;
 
 interface Message {
   id: string;
@@ -20,6 +24,17 @@ const HINTS = [
   'Я разговаривал с бабушкой, которой давно нет',
 ];
 
+const formatText = (text: string) =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i} className="font-semibold text-primary">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+
 const greeting: Message = {
   id: 'hello',
   role: 'bot',
@@ -34,7 +49,7 @@ const openAccount = () =>
   document.getElementById('account')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 const DreamChat = () => {
-  const { user, left, hasAccess, spend, addDream } = useDreamWallet();
+  const { user, left, hasAccess, spend, syncAccess, addDream } = useDreamWallet();
   const [messages, setMessages] = useState<Message[]>([greeting]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -70,14 +85,16 @@ const DreamChat = () => {
       return;
     }
 
-    const allowed = await spend();
-    if (!allowed) {
-      toast({
-        title: 'Бесплатные сны закончились',
-        description: 'Откройте полный доступ, чтобы толковать без ограничений.',
-      });
-      openPricing();
-      return;
+    if (!user) {
+      const allowed = await spend();
+      if (!allowed) {
+        toast({
+          title: 'Бесплатные сны закончились',
+          description: 'Создайте кабинет или откройте полный доступ.',
+        });
+        openAccount();
+        return;
+      }
     }
 
     const userMsg: Message = { id: `u-${Date.now()}`, role: 'user', text: value };
@@ -85,25 +102,42 @@ const DreamChat = () => {
     setInput('');
     setTyping(true);
 
-    window.setTimeout(() => {
-      const result = interpretDream(value);
-      const botMsg: Message = {
-        id: `b-${Date.now()}`,
-        role: 'bot',
-        text: result.text,
-        symbols: result.symbols.map((s) => s.title),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-      setTyping(false);
-      addDream({
-        id: `d-${Date.now()}`,
-        date: new Date().toISOString(),
-        question: value,
-        answer: result.text,
-        mood: result.mood,
-        symbols: result.symbols.map((s) => s.title),
+    const moon = getMoonInfo(new Date());
+    const local = interpretDream(value);
+
+    let answer = '';
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'interpret',
+          dream: value,
+          user_id: user?.user_id,
+          moon_phase: `${moon.phaseName}, ${moon.lunarDay} лунный день`,
+        }),
       });
-    }, 1400);
+      const data = await res.json();
+      if (res.ok && data.answer) answer = data.answer as string;
+      if (res.ok && user) syncAccess(data);
+    } catch {
+      /* сеть недоступна — покажем локальный разбор */
+    }
+
+    const text = answer || local.text;
+    setMessages((prev) => [
+      ...prev,
+      { id: `b-${Date.now()}`, role: 'bot', text, symbols: local.symbols.map((s) => s.title) },
+    ]);
+    setTyping(false);
+    addDream({
+      id: `d-${Date.now()}`,
+      date: new Date().toISOString(),
+      question: value,
+      answer: text,
+      mood: local.mood,
+      symbols: local.symbols.map((s) => s.title),
+    });
   };
 
   return (
@@ -152,7 +186,7 @@ const DreamChat = () => {
                       : 'rounded-bl-sm border border-border bg-secondary/60 text-foreground'
                   }`}
                 >
-                  {m.text}
+                  {m.role === 'bot' ? formatText(m.text) : m.text}
                   {m.symbols && m.symbols.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {m.symbols.map((s) => (

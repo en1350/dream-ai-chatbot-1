@@ -66,7 +66,7 @@ const Hero = () => {
             </span>
             <span className="flex items-center gap-2">
               <Icon name="Clock" size={16} className="text-primary" />
-              Ответ за 4 секунды
+              Разбор по 4 сонникам
             </span>
           </div>
         </div>

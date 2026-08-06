@@ -26,6 +26,13 @@
       "path": "/",
       "body": {"action": "status"},
       "expectedStatus": 400
+    },
+    {
+      "name": "Толкование слишком короткого сна",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "interpret", "dream": "сон"},
+      "expectedStatus": 400
     }
   ]
 }

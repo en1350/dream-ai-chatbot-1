@@ -63,7 +63,7 @@ const About = () => (
             {[
               { value: '48 000', label: 'разобранных снов' },
               { value: '12', label: 'архетипов в базе' },
-              { value: '4 сек', label: 'на толкование' },
+              { value: '4', label: 'сонника в разборе' },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-border bg-card/50 p-4">
                 <p className="font-display text-3xl gold-text">{s.value}</p>

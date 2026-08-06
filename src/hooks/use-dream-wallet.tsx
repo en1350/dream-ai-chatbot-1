@@ -35,6 +35,7 @@ interface WalletState {
   register: (email: string, password: string) => Promise<{ error?: string }>;
   logout: () => void;
   spend: () => Promise<boolean>;
+  syncAccess: (data: Record<string, unknown>) => void;
   addDream: (dream: DreamRecord) => void;
   buyAccess: () => Promise<{ error?: string }>;
   refresh: () => Promise<void>;
@@ -215,6 +216,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
       register,
       logout,
       spend,
+      syncAccess: applyAccess,
       addDream,
       buyAccess,
       refresh,
@@ -233,6 +235,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
       register,
       logout,
       spend,
+      applyAccess,
       addDream,
       buyAccess,
       refresh,

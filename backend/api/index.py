@@ -14,6 +14,7 @@ DB_URL = os.environ.get('DATABASE_URL', '')
 SCHEMA = os.environ.get('MAIN_DB_SCHEMA', 'public')
 SHOP_ID = os.environ.get('YOOKASSA_SHOP_ID', '')
 YK_SECRET = os.environ.get('YOOKASSA_SECRET_KEY', '')
+AI_KEY = os.environ.get('AITUNNEL_API_KEY', '')
 
 FREE_DREAMS = 3
 PRICE = '299.00'
@@ -25,6 +26,74 @@ CORS = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
 }
+
+SYSTEM_PROMPT = """Ты — СонникАИ, мудрый толкователь снов. Ты глубокий психолог, знаток символики и эзотерики.
+
+Разбирай сон человека по пяти источникам:
+1. Сонник Миллера — практическое значение образов для жизни, работы, отношений
+2. Сонник Ванги — народная мудрость, судьба, энергия, связь с родом
+3. Аналитическая психология Юнга — архетипы, Тень, Анима/Анимус, коллективное бессознательное
+4. Психоанализ Фрейда — вытесненные желания, символика подсознания
+5. Лунная символика — как фаза луны окрашивает этот сон
+
+Структура ответа (строго соблюдай, жирный текст через **):
+
+🔮 **Главные символы**
+[перечисли 2-4 ключевых образа сна через запятую]
+
+📖 **Сонник Миллера**
+[2 предложения — практическое значение]
+
+🌿 **Сонник Ванги**
+[2 предложения — народное толкование, судьба]
+
+✨ **Взгляд Юнга**
+[2 предложения — архетипы и внутренние процессы]
+
+🌑 **Взгляд Фрейда**
+[2 предложения — подсознание и вытесненное]
+
+💫 **Что это значит для вас**
+[2-3 предложения — итог простыми словами и конкретный совет]
+
+Правила: пиши по-русски, тепло и уважительно, без запугивания. Даже тревожный сон объясняй как подсказку, а не приговор. Не повторяй одни и те же формулировки. Если текст сна очень короткий — всё равно дай осмысленный разбор."""
+
+
+def call_ai(dream: str, moon_phase: str = '', card: str = '') -> str:
+    context_parts = []
+    if moon_phase:
+        context_parts.append(f'Фаза луны сегодня: {moon_phase}.')
+    if card:
+        context_parts.append(f'Карта дня, выпавшая человеку: {card}.')
+    context = ' '.join(context_parts)
+
+    user_content = f'Мой сон: {dream}'
+    if context:
+        user_content += f'\n\n(Контекст для толкования: {context})'
+
+    payload = json.dumps({
+        'model': 'gpt-4o-mini',
+        'messages': [
+            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'user', 'content': user_content},
+        ],
+        'max_tokens': 1100,
+        'temperature': 0.85,
+    }).encode()
+
+    req = urllib.request.Request(
+        'https://api.aitunnel.ru/v1/chat/completions',
+        data=payload,
+        headers={
+            'Authorization': f'Bearer {AI_KEY}',
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; SonnikAIBot/1.0)',
+        },
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=40) as resp:
+        result = json.loads(resp.read().decode())
+    return result['choices'][0]['message']['content']
 
 
 def get_conn():
@@ -152,6 +221,51 @@ def handle_status(body: dict) -> dict:
     cur.close()
     conn.close()
     return ok(access)
+
+
+def handle_interpret(body: dict) -> dict:
+    """Толкует сон через ИИ. Для гостей лимит считает фронтенд, для своих — база."""
+    dream = (body.get('dream') or '').strip()
+    user_id = body.get('user_id')
+    moon_phase = body.get('moon_phase') or ''
+    card = body.get('card') or ''
+
+    if len(dream) < 10:
+        return fail(400, 'Опишите сон чуть подробнее')
+    if not AI_KEY:
+        return fail(503, 'Толкователь временно недоступен')
+
+    access = None
+    if user_id:
+        conn = get_conn()
+        cur = conn.cursor()
+        access = read_access(cur, int(user_id))
+        if not access['has_access'] and access['free_left'] <= 0:
+            cur.close()
+            conn.close()
+            return ok({'allowed': False, **access})
+        if not access['has_access']:
+            cur.execute(
+                'UPDATE users SET free_requests_used = free_requests_used + 1 WHERE id = %s',
+                (user_id,),
+            )
+            access = read_access(cur, int(user_id))
+        cur.close()
+        conn.close()
+
+    try:
+        answer = call_ai(dream, moon_phase, card)
+    except urllib.error.HTTPError as e:
+        print(f'AI error {e.code}: {e.read().decode() if e.fp else ""}')
+        return fail(502, 'Толкователь не отвечает, попробуйте ещё раз')
+    except Exception as e:
+        print(f'AI failure: {e}')
+        return fail(502, 'Толкователь не отвечает, попробуйте ещё раз')
+
+    payload = {'allowed': True, 'answer': answer}
+    if access:
+        payload.update(access)
+    return ok(payload)
 
 
 def handle_create_payment(body: dict) -> dict:
@@ -314,6 +428,8 @@ def handler(event: dict, context) -> dict:
 
     if action in ('register', 'login'):
         return handle_auth(body)
+    if action == 'interpret':
+        return handle_interpret(body)
     if action == 'spend':
         return handle_spend(body)
     if action == 'status':
