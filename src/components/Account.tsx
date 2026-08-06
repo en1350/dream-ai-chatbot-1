@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +18,7 @@ const AuthCard = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [consent, setConsent] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +29,10 @@ const AuthCard = () => {
     }
     if (password.length < 6) {
       setError('Пароль — минимум 6 символов');
+      return;
+    }
+    if (mode === 'register' && !consent) {
+      setError('Нужно согласие на обработку персональных данных');
       return;
     }
     const fn = mode === 'login' ? login : register;
@@ -83,6 +90,26 @@ const AuthCard = () => {
             className="border-border bg-background/60"
           />
         </div>
+        {mode === 'register' && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background/40 p-4">
+            <Checkbox
+              checked={consent}
+              onCheckedChange={(v) => setConsent(v === true)}
+              className="mt-0.5"
+            />
+            <span className="text-xs leading-relaxed text-muted-foreground">
+              Я даю согласие на обработку персональных данных и принимаю{' '}
+              <Link
+                to="/privacy"
+                target="_blank"
+                className="text-primary underline underline-offset-2 hover:no-underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Политику конфиденциальности
+              </Link>
+            </span>
+          </label>
+        )}
         {error && <p className="text-xs text-destructive">{error}</p>}
         <Button type="submit" disabled={authLoading} className="h-12 w-full rounded-full text-base">
           <Icon

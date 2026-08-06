@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -5,13 +6,16 @@ import { FREE_DREAMS, PRICE, useDreamWallet } from '@/hooks/use-dream-wallet';
 
 const FREE_FEATURES = [
   'Три толкования снов',
+  'Карта дня — одна колода на выбор',
   'Доступ к словарю символов',
   'История разборов на устройстве',
 ];
 
 const FULL_FEATURES = [
   'Безлимитные толкования снов',
+  'Карта дня в двух колодах: Таро и Ленорман',
   'Глубокий разбор с архетипами и настроением',
+  'Лунный календарь снов на любой день',
   'Личный архив без ограничений',
   'Все будущие обновления сонника',
   'Один платёж на 3 года — без автопродления',
@@ -108,8 +112,16 @@ const Pricing = () => {
                   {payLoading ? 'Готовим оплату…' : `Оплатить ${PRICE} ₽`}
                 </Button>
               )}
-              <p className="mt-4 text-center text-xs text-muted-foreground">
-                Оплата картой или СБП через ЮКассу · возврат в течение 14 дней
+              <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
+                Оплата картой или СБП через ЮКассу. Нажимая «Оплатить», вы соглашаетесь с{' '}
+                <Link
+                  to="/privacy"
+                  target="_blank"
+                  className="text-primary underline underline-offset-2 hover:no-underline"
+                >
+                  условиями обработки данных
+                </Link>
+                .
               </p>
             </div>
           </div>

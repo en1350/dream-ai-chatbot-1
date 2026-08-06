@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +111,15 @@ const Contacts = () => {
               Отправить письмо
             </Button>
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              Отправляя форму, вы соглашаетесь с обработкой персональных данных.
+              Отправляя форму, вы соглашаетесь с обработкой персональных данных в соответствии с{' '}
+              <Link
+                to="/privacy"
+                target="_blank"
+                className="text-primary underline underline-offset-2 hover:no-underline"
+              >
+                Политикой конфиденциальности
+              </Link>
+              .
             </p>
           </form>
         </div>

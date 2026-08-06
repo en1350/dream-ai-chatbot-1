@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { PRICE } from '@/hooks/use-dream-wallet';
 
@@ -47,7 +48,12 @@ const Footer = () => (
       </div>
 
       <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row">
-        <p>© {new Date().getFullYear()} СонникАИ. Сны остаются вашими.</p>
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-5">
+          <p>© {new Date().getFullYear()} СонникАИ. Сны остаются вашими.</p>
+          <Link to="/privacy" className="transition-colors hover:text-primary">
+            Политика конфиденциальности
+          </Link>
+        </div>
         <p className="font-hand text-base text-primary/80">спокойной ночи</p>
       </div>
     </div>
