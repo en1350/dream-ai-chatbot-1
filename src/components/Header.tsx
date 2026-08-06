@@ -72,10 +72,8 @@ const Header = () => {
             onClick={() => go(user ? 'pricing' : 'account')}
             className="hidden items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 py-2 text-sm text-foreground transition-colors hover:bg-primary/20 sm:flex"
           >
-            <Icon name={user ? 'Wallet' : 'LogIn'} size={15} className="text-primary" />
-            {!user ? (
-              <span>Войти</span>
-            ) : hasAccess ? (
+            <Icon name="Wallet" size={15} className="text-primary" />
+            {hasAccess ? (
               <span>Доступ открыт</span>
             ) : (
               <span>

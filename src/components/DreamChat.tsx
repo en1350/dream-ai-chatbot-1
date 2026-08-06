@@ -40,8 +40,13 @@ const DreamChat = () => {
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, typing]);
 
@@ -53,21 +58,15 @@ const DreamChat = () => {
     }
     setError('');
 
-    if (!user) {
-      toast({
-        title: 'Нужен вход в кабинет',
-        description: 'Зарегистрируйтесь по почте — три первых сна бесплатно.',
-      });
-      openAccount();
-      return;
-    }
-
     if (!hasAccess && left <= 0) {
       toast({
         title: 'Бесплатные сны закончились',
-        description: 'Откройте полный доступ — 299 ₽ на весь период.',
+        description: user
+          ? 'Откройте полный доступ, чтобы толковать без ограничений.'
+          : 'Зарегистрируйтесь или откройте полный доступ.',
       });
-      openPricing();
+      if (user) openPricing();
+      else openAccount();
       return;
     }
 
@@ -75,7 +74,7 @@ const DreamChat = () => {
     if (!allowed) {
       toast({
         title: 'Бесплатные сны закончились',
-        description: 'Откройте полный доступ — 299 ₽ на весь период.',
+        description: 'Откройте полный доступ, чтобы толковать без ограничений.',
       });
       openPricing();
       return;
@@ -136,7 +135,7 @@ const DreamChat = () => {
             </div>
             <span className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs">
               <Icon name="Wallet" size={13} className="text-primary" />
-              {!user ? 'войдите' : hasAccess ? 'Безлимит' : `${left} / ${FREE_DREAMS}`}
+              {hasAccess ? 'Безлимит' : `${left} / ${FREE_DREAMS}`}
             </span>
           </div>
 
@@ -219,22 +218,15 @@ const DreamChat = () => {
               </Button>
             </div>
             {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-            {!user && (
+            {!hasAccess && left === 0 && (
               <button
-                onClick={openAccount}
+                onClick={user ? openPricing : openAccount}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-primary/20"
               >
-                <Icon name="UserPlus" size={15} />
-                Зарегистрируйтесь по почте — 3 сна бесплатно
-              </button>
-            )}
-            {user && !hasAccess && left === 0 && (
-              <button
-                onClick={openPricing}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-primary/20"
-              >
-                <Icon name="Sparkles" size={15} />
-                Бесплатные сны закончились — открыть доступ за 299 ₽
+                <Icon name={user ? 'Sparkles' : 'UserPlus'} size={15} />
+                {user
+                  ? 'Бесплатные сны закончились — открыть полный доступ'
+                  : 'Бесплатные сны закончились — создать кабинет'}
               </button>
             )}
           </div>

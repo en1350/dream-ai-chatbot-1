@@ -1,6 +1,6 @@
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { FREE_DREAMS, PRICE, useDreamWallet } from '@/hooks/use-dream-wallet';
+import { useDreamWallet } from '@/hooks/use-dream-wallet';
 
 const PORTAL =
   'https://cdn.poehali.dev/projects/27ac383e-de3c-4d04-bda2-5818fbd8c423/files/45036a01-7855-4c22-ac40-944bf04712df.jpg';
@@ -32,8 +32,7 @@ const Hero = () => {
 
           <p className="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
             Чат-бот разбирает ночной сюжет на архетипы, читает интонацию и возвращает толкование
-            обычными словами — без гаданий и суеверий. Первые {FREE_DREAMS} сна бесплатно,
-            дальше — {PRICE} ₽ на весь период.
+            обычными словами — без гаданий и суеверий.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -81,17 +80,6 @@ const Hero = () => {
               className="relative w-full rounded-[2rem] border border-primary/25 shadow-2xl"
               loading="lazy"
             />
-          </div>
-          <div className="glass absolute -bottom-6 -left-4 flex items-center gap-3 rounded-2xl border border-border/70 px-4 py-3 md:-left-10">
-            <Icon name="BrainCircuit" size={20} className="text-accent" />
-            <div className="leading-tight">
-              <p className="text-sm font-medium">12 архетипов</p>
-              <p className="text-xs text-muted-foreground">в базе толкований</p>
-            </div>
-          </div>
-          <div className="glass absolute -top-4 -right-2 rounded-2xl border border-border/70 px-4 py-3 md:-right-8">
-            <p className="font-hand text-xl text-primary">«я снова летел»</p>
-            <p className="text-xs text-muted-foreground">разобрано за 4 сек</p>
           </div>
         </div>
       </div>

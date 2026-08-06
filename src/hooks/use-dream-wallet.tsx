@@ -41,8 +41,9 @@ interface WalletState {
   reset: () => void;
 }
 
-const USER_KEY = 'morpheus-user-v2';
-const HISTORY_KEY = 'morpheus-history-v2';
+const USER_KEY = 'sonnikai-user-v2';
+const HISTORY_KEY = 'sonnikai-history-v2';
+const GUEST_KEY = 'sonnikai-guest-used';
 
 const WalletContext = createContext<WalletState | null>(null);
 
@@ -107,7 +108,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!user) {
-      setUsed(0);
+      setUsed(readJSON<number>(GUEST_KEY, 0));
       setHasAccess(false);
       setAccessUntil(null);
       return;
@@ -153,7 +154,18 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
   const logout = useCallback(() => saveUser(null), [saveUser]);
 
   const spend = useCallback(async () => {
-    if (!user) return false;
+    if (!user) {
+      const guestUsed = readJSON<number>(GUEST_KEY, 0);
+      if (guestUsed >= FREE_DREAMS) return false;
+      const next = guestUsed + 1;
+      setUsed(next);
+      try {
+        window.localStorage.setItem(GUEST_KEY, JSON.stringify(next));
+      } catch {
+        /* приватный режим */
+      }
+      return true;
+    }
     const { ok, data } = await call({ action: 'spend', user_id: user.user_id });
     if (!ok) return false;
     applyAccess(data);
