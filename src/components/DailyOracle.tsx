@@ -2,8 +2,14 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { DeckId, DECKS, dayKey, drawDailyCard, OracleCard, todayLabel } from '@/lib/divination';
+import { SUIT_NAMES } from '@/lib/tarot';
 
 const STORAGE_KEY = 'sonnikai-oracle-day';
+
+const suitLabel = (card: OracleCard) => {
+  const suit = (card as { suit?: keyof typeof SUIT_NAMES }).suit;
+  return suit ? SUIT_NAMES[suit] : 'старший аркан';
+};
 
 const DailyOracle = () => {
   const [deck, setDeck] = useState<DeckId>('lenormand');
@@ -96,6 +102,11 @@ const DailyOracle = () => {
                   )}
                   <Icon name={card.icon} size={44} className="text-primary" />
                   <p className="px-3 text-center font-display text-lg leading-tight">{card.name}</p>
+                  {'arcana' in card && (
+                    <span className="absolute bottom-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {suitLabel(card)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary">
