@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
+import { formatText } from '@/lib/format-text';
 import { DreamRecord, useDreamWallet } from '@/hooks/use-dream-wallet';
 
 const MOOD_COLOR: Record<string, string> = {
@@ -27,8 +29,18 @@ const fmt = (iso: string) =>
   });
 
 const DreamHistory = () => {
-  const { history } = useDreamWallet();
+  const { history, reset } = useDreamWallet();
   const [active, setActive] = useState<DreamRecord | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const clearHistory = () => {
+    reset();
+    setConfirmOpen(false);
+    toast({
+      title: 'История очищена',
+      description: 'Все сохранённые толкования удалены с этого устройства.',
+    });
+  };
 
   return (
     <section id="history" className="relative scroll-mt-24 py-20 md:py-28">
@@ -44,12 +56,24 @@ const DreamHistory = () => {
               повторяющиеся символы — это и есть личный язык вашего бессознательного.
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/60 px-5 py-4">
-            <Icon name="Library" size={22} className="text-primary" />
-            <div className="leading-tight">
-              <p className="font-display text-2xl">{history.length}</p>
-              <p className="text-xs text-muted-foreground">снов в архиве</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/60 px-5 py-4">
+              <Icon name="Library" size={22} className="text-primary" />
+              <div className="leading-tight">
+                <p className="font-display text-2xl">{history.length}</p>
+                <p className="text-xs text-muted-foreground">снов в архиве</p>
+              </div>
             </div>
+            {history.length > 0 && (
+              <Button
+                variant="outline"
+                className="rounded-full border-border bg-transparent text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <Icon name="Trash2" size={16} className="mr-2" />
+                Очистить историю
+              </Button>
+            )}
           </div>
         </div>
 
@@ -121,8 +145,38 @@ const DreamHistory = () => {
             <DialogDescription>{active && fmt(active.date)}</DialogDescription>
           </DialogHeader>
           <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-            {active?.answer}
+            {active ? formatText(active.answer) : null}
           </p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl font-light">
+              Очистить историю снов?
+            </DialogTitle>
+            <DialogDescription>
+              Будут удалены все {history.length} сохранённых толкований. Это действие нельзя
+              отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-full border-border bg-transparent"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              className="flex-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/85"
+              onClick={clearHistory}
+            >
+              <Icon name="Trash2" size={16} className="mr-2" />
+              Удалить всё
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </section>

@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { FREE_DREAMS, useDreamWallet } from '@/hooks/use-dream-wallet';
 import { interpretDream } from '@/lib/oracle';
 import { getMoonInfo } from '@/lib/moon';
+import { formatText } from '@/lib/format-text';
 import func2url from '../../backend/func2url.json';
 
 const API_URL = func2url.api;
@@ -23,17 +24,6 @@ const HINTS = [
   'За мной кто-то гнался по тёмной дороге',
   'Я разговаривал с бабушкой, которой давно нет',
 ];
-
-const formatText = (text: string) =>
-  text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith('**') && part.endsWith('**') ? (
-      <strong key={i} className="font-semibold text-primary">
-        {part.slice(2, -2)}
-      </strong>
-    ) : (
-      part
-    ),
-  );
 
 const greeting: Message = {
   id: 'hello',
