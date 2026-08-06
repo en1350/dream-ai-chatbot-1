@@ -7,9 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 
 const CHANNELS = [
-  { icon: 'Mail', title: 'Почта', value: 'hello@morpheus.dream', hint: 'ответим за 1 день' },
-  { icon: 'Send', title: 'Телеграм', value: '@morpheus_dreams', hint: 'быстрее всего' },
-  { icon: 'MessageCircleQuestion', title: 'Поддержка', value: 'help@morpheus.dream', hint: 'оплата и доступ' },
+  { icon: 'Mail', title: 'Почта', value: 'hello@sonnikai.ru', hint: 'ответим за 1 день' },
+  { icon: 'Send', title: 'Телеграм', value: '@sonnikai', hint: 'быстрее всего' },
+  { icon: 'MessageCircleQuestion', title: 'Поддержка', value: 'help@sonnikai.ru', hint: 'оплата и доступ' },
 ];
 
 const Contacts = () => {
@@ -27,7 +27,7 @@ const Contacts = () => {
 
     toast({
       title: 'Письмо отправлено',
-      description: 'Морфей прочитает его до следующего рассвета.',
+      description: 'СонникАИ прочитает его до следующего рассвета.',
     });
     setForm({ name: '', email: '', message: '' });
   };

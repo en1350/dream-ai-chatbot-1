@@ -58,7 +58,7 @@ const DreamHistory = () => {
             <Icon name="MoonStar" size={34} className="mx-auto text-primary/70" />
             <p className="mt-5 font-display text-2xl">Архив пока пуст</p>
             <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-              Расскажите Морфею первый сон — и он появится здесь вместе с разбором символов
+              Расскажите СонникАИ первый сон — и он появится здесь вместе с разбором символов
               и настроения.
             </p>
             <Button

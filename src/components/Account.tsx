@@ -36,7 +36,7 @@ const AuthCard = () => {
     }
     toast({
       title: mode === 'login' ? 'С возвращением' : 'Кабинет создан',
-      description: `Морфей ждёт ваш сон. Бесплатных толкований: ${FREE_DREAMS}.`,
+      description: `СонникАИ ждёт ваш сон. Бесплатных толкований: ${FREE_DREAMS}.`,
     });
   };
 
@@ -118,7 +118,7 @@ const Account = () => {
 
   const saveName = () => {
     window.localStorage.setItem('morpheus-name', name);
-    toast({ title: 'Сохранено', description: 'Морфей запомнил, как к вам обращаться.' });
+    toast({ title: 'Сохранено', description: 'СонникАИ запомнил, как к вам обращаться.' });
   };
 
   const check = async () => {
@@ -141,7 +141,7 @@ const Account = () => {
           <p className="mt-4 text-muted-foreground">
             {user
               ? 'Статус доступа, счётчик снов и настройки — всё в одном месте.'
-              : 'Зарегистрируйтесь по почте, чтобы Морфей запомнил ваши сны и счётчик.'}
+              : 'Зарегистрируйтесь по почте, чтобы СонникАИ запомнил ваши сны и счётчик.'}
           </p>
         </div>
 

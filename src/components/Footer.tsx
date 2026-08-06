@@ -3,6 +3,7 @@ import { PRICE } from '@/hooks/use-dream-wallet';
 
 const LINKS = [
   { id: 'oracle', label: 'Карта дня' },
+  { id: 'moon', label: 'Лунный календарь' },
   { id: 'chat', label: 'Чат' },
   { id: 'history', label: 'История' },
   { id: 'symbols', label: 'Словарь' },
@@ -22,7 +23,7 @@ const Footer = () => (
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 bg-primary/10">
               <Icon name="Moon" size={18} className="text-primary" />
             </span>
-            <span className="font-display text-2xl gold-text">Морфей</span>
+            <span className="font-display text-2xl gold-text">СонникАИ</span>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             Чат-бот для толкования снов с искусственным интеллектом. Три сна бесплатно,
@@ -46,7 +47,7 @@ const Footer = () => (
       </div>
 
       <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row">
-        <p>© {new Date().getFullYear()} Морфей. Сны остаются вашими.</p>
+        <p>© {new Date().getFullYear()} СонникАИ. Сны остаются вашими.</p>
         <p className="font-hand text-base text-primary/80">спокойной ночи</p>
       </div>
     </div>

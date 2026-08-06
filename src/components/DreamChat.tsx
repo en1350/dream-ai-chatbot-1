@@ -24,7 +24,7 @@ const greeting: Message = {
   id: 'hello',
   role: 'bot',
   text:
-    'Я Морфей. Опишите сон так, как помните — обрывками, без порядка, это нормально. Чем больше деталей и ощущений, тем точнее толкование.',
+    'Здравствуйте. Опишите сон так, как помните — обрывками, без порядка, это нормально. Чем больше деталей и ощущений, тем точнее толкование.',
 };
 
 const openPricing = () =>
@@ -113,7 +113,7 @@ const DreamChat = () => {
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-[11px] uppercase tracking-[0.28em] text-primary">Главный зал</p>
           <h2 className="mt-4 font-display text-4xl font-light md:text-5xl">
-            Чат с <span className="gold-text italic font-semibold">Морфеем</span>
+            Чат с <span className="gold-text italic font-semibold">СонникАИ</span>
           </h2>
           <p className="mt-4 text-muted-foreground">
             Напишите сон своими словами. Бот найдёт архетипы, определит интонацию и объяснит,
@@ -128,7 +128,7 @@ const DreamChat = () => {
                 <Icon name="Moon" size={17} className="text-primary" />
               </span>
               <div className="leading-tight">
-                <p className="text-sm font-medium">Морфей</p>
+                <p className="text-sm font-medium">СонникАИ</p>
                 <p className="text-xs text-muted-foreground">
                   {typing ? 'всматривается в сон…' : 'на связи'}
                 </p>

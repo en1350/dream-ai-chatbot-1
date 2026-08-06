@@ -5,6 +5,7 @@ import { FREE_DREAMS, useDreamWallet } from '@/hooks/use-dream-wallet';
 
 const NAV = [
   { id: 'oracle', label: 'Карта дня' },
+  { id: 'moon', label: 'Луна' },
   { id: 'chat', label: 'Чат' },
   { id: 'history', label: 'История' },
   { id: 'symbols', label: 'Словарь' },
@@ -46,7 +47,7 @@ const Header = () => {
           </span>
           <span className="leading-none">
             <span className="block font-display text-2xl font-semibold tracking-wide gold-text">
-              Морфей
+              СонникАИ
             </span>
             <span className="block text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
               толкователь снов

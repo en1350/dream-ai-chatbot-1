@@ -94,7 +94,7 @@ const DailyOracle = () => {
                     }
                   >
                     <Icon name="MoonStar" size={16} className="mr-2" />
-                    Рассказать сон Морфею
+                    Рассказать сон СонникАИ
                   </Button>
                 </div>
               </div>

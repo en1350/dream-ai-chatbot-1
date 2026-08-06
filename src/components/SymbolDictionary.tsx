@@ -33,7 +33,7 @@ const SymbolDictionary = () => {
       <div className="pointer-events-none absolute inset-x-0 top-1/4 h-72 bg-accent/10 blur-[140px]" />
       <div className="container relative">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-primary">Сонник Морфея</p>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-primary">Словарь снов</p>
           <h2 className="mt-4 font-display text-4xl font-light md:text-5xl">
             Словарь <span className="gold-text italic font-semibold">символов</span>
           </h2>
@@ -76,7 +76,7 @@ const SymbolDictionary = () => {
 
         {filtered.length === 0 ? (
           <p className="mt-14 text-center text-sm text-muted-foreground">
-            Такого символа в словаре пока нет — опишите сон в чате, Морфей разберёт его вручную.
+            Такого символа в словаре пока нет — опишите сон в чате, СонникАИ разберёт его вручную.
           </p>
         ) : (
           <Accordion

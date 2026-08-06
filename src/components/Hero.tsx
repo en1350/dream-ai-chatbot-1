@@ -25,7 +25,7 @@ const Hero = () => {
 
           <h1 className="mt-7 font-display text-[3.2rem] font-light leading-[0.95] tracking-tight md:text-7xl">
             Расскажите сон —<br />
-            <span className="gold-text font-semibold italic">Морфей объяснит</span>
+            <span className="gold-text font-semibold italic">СонникАИ объяснит</span>
             <br />
             что он значит
           </h1>
