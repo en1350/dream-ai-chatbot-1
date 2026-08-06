@@ -1,3 +1,5 @@
+import { LENORMAND_CARDS } from './lenormand';
+
 export type DeckId = 'lenormand' | 'tarot';
 
 export interface OracleCard {
@@ -11,94 +13,9 @@ export interface OracleCard {
 export const DECKS: Record<DeckId, { title: string; subtitle: string; icon: string; cards: OracleCard[] }> = {
   lenormand: {
     title: 'Ленорман',
-    subtitle: '36 бытовых знаков — говорят прямо о делах и людях',
+    subtitle: 'Полная колода из 36 карт — говорит прямо о делах, деньгах и людях',
     icon: 'Clover',
-    cards: [
-      {
-        name: 'Всадник',
-        icon: 'Rabbit',
-        keyword: 'Новость',
-        message: 'Сегодня к вам движется известие — короткое, но меняющее планы дня.',
-        advice: 'Не отключайте телефон и не откладывайте ответ: скорость сегодня важнее идеальной формулировки.',
-      },
-      {
-        name: 'Клевер',
-        icon: 'Clover',
-        keyword: 'Удачный случай',
-        message: 'День даёт небольшое окно везения — оно короткое, зато настоящее.',
-        advice: 'Сделайте то, что давно откладывали «до подходящего момента». Он именно сегодня.',
-      },
-      {
-        name: 'Корабль',
-        icon: 'Ship',
-        keyword: 'Движение',
-        message: 'Что-то в вашей жизни трогается с места: дорога, разговор или давняя идея.',
-        advice: 'Разрешите себе шаг без гарантии результата — сегодня важнее направление, чем точность.',
-      },
-      {
-        name: 'Дом',
-        icon: 'House',
-        keyword: 'Опора',
-        message: 'День про тыл и близких. Всё важное произойдёт не на публике, а дома.',
-        advice: 'Вложитесь в порядок и уют — это вернётся спокойствием на всю неделю.',
-      },
-      {
-        name: 'Дерево',
-        icon: 'TreeDeciduous',
-        keyword: 'Здоровье и корни',
-        message: 'Организм просит внимания, а память — разговора с прошлым.',
-        advice: 'Замедлитесь. Сон и вода сегодня сделают больше, чем любая продуктивность.',
-      },
-      {
-        name: 'Звёзды',
-        icon: 'Stars',
-        keyword: 'Ясность',
-        message: 'Туман расходится: становится понятно, чего вы на самом деле хотите.',
-        advice: 'Запишите пришедшую мысль — через неделю она станет планом.',
-      },
-      {
-        name: 'Ключ',
-        icon: 'Key',
-        keyword: 'Решение найдено',
-        message: 'То, что казалось тупиком, сегодня открывается — и почти без усилий.',
-        advice: 'Вернитесь к вопросу, который бросили. Сейчас у вас есть недостающая деталь.',
-      },
-      {
-        name: 'Сердце',
-        icon: 'Heart',
-        keyword: 'Тепло',
-        message: 'День про чувства и примирение — кто-то думает о вас больше, чем показывает.',
-        advice: 'Скажите вслух то доброе, что обычно оставляете при себе.',
-      },
-      {
-        name: 'Луна',
-        icon: 'Moon',
-        keyword: 'Признание и интуиция',
-        message: 'Ваши усилия заметили. Внутренний голос сегодня точнее логики.',
-        advice: 'Доверьтесь первому впечатлению о человеке — оно верное.',
-      },
-      {
-        name: 'Лиса',
-        icon: 'PawPrint',
-        keyword: 'Осторожность',
-        message: 'Рядом хитрость или самообман: не всё, что предлагают, выгодно вам.',
-        advice: 'Перечитайте условия и не соглашайтесь сегодня на «срочное» предложение.',
-      },
-      {
-        name: 'Солнце',
-        icon: 'Sun',
-        keyword: 'Успех',
-        message: 'Сильный день: энергия есть, обстоятельства складываются в вашу пользу.',
-        advice: 'Беритесь за главное с утра — до вечера дело дойдёт до результата.',
-      },
-      {
-        name: 'Букет',
-        icon: 'Flower2',
-        keyword: 'Подарок',
-        message: 'Вас ждёт приятность — внимание, комплимент или маленькая радость.',
-        advice: 'Примите её, не обесценивая. Умение брать сегодня важнее умения давать.',
-      },
-    ],
+    cards: LENORMAND_CARDS,
   },
   tarot: {
     title: 'Таро',
@@ -193,19 +110,24 @@ export const DECKS: Record<DeckId, { title: string; subtitle: string; icon: stri
   },
 };
 
-const dayKey = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+export const dayKey = (date = new Date()) =>
+  `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+const hashString = (str: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 13;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 15;
+  return h >>> 0;
 };
 
-export const drawDailyCard = (deck: DeckId, salt = 0): OracleCard => {
+export const drawDailyCard = (deck: DeckId, date = new Date()): OracleCard => {
   const cards = DECKS[deck].cards;
-  const key = `${dayKey()}-${deck}-${salt}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 31 + key.charCodeAt(i)) % 100000;
-  }
-  return cards[hash % cards.length];
+  return cards[hashString(`${dayKey(date)}::${deck}::sonnikai`) % cards.length];
 };
 
 export const todayLabel = () =>

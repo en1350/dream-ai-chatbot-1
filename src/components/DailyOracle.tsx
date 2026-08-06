@@ -1,12 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { DeckId, DECKS, drawDailyCard, OracleCard, todayLabel } from '@/lib/divination';
+import { DeckId, DECKS, dayKey, drawDailyCard, OracleCard, todayLabel } from '@/lib/divination';
+
+const STORAGE_KEY = 'sonnikai-oracle-day';
 
 const DailyOracle = () => {
   const [deck, setDeck] = useState<DeckId>('lenormand');
   const [card, setCard] = useState<OracleCard | null>(null);
   const [flipping, setFlipping] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { day: string; deck: DeckId };
+      if (saved.day !== dayKey()) return;
+      setDeck(saved.deck);
+      setCard(drawDailyCard(saved.deck));
+    } catch {
+      /* приватный режим */
+    }
+  }, []);
 
   const draw = (next: DeckId) => {
     setDeck(next);
@@ -15,6 +30,11 @@ const DailyOracle = () => {
     window.setTimeout(() => {
       setCard(drawDailyCard(next));
       setFlipping(false);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ day: dayKey(), deck: next }));
+      } catch {
+        /* приватный режим */
+      }
     }, 700);
   };
 
@@ -68,7 +88,12 @@ const DailyOracle = () => {
               <div className="starfield pointer-events-none absolute inset-0 opacity-30" />
               <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
               <div className="relative flex flex-col gap-8 md:flex-row md:items-start">
-                <div className="flex h-52 w-36 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl border border-primary/40 bg-gradient-to-b from-secondary/80 to-background/80">
+                <div className="relative flex h-52 w-36 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl border border-primary/40 bg-gradient-to-b from-secondary/80 to-background/80">
+                  {'number' in card && (
+                    <span className="absolute left-3 top-3 font-display text-sm text-primary/70">
+                      {(card as { number: number }).number}
+                    </span>
+                  )}
                   <Icon name={card.icon} size={44} className="text-primary" />
                   <p className="px-3 text-center font-display text-lg leading-tight">{card.name}</p>
                 </div>
@@ -79,6 +104,18 @@ const DailyOracle = () => {
                   <p className="mt-5 font-display text-2xl font-light leading-snug md:text-3xl">
                     {card.message}
                   </p>
+                  {'keywords' in card && (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {(card as { keywords: string[] }).keywords.map((k) => (
+                        <span
+                          key={k}
+                          className="rounded-full border border-border bg-background/50 px-3 py-1 text-xs text-muted-foreground"
+                        >
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-6 rounded-2xl border border-border bg-background/50 p-5">
                     <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-primary">
                       <Icon name="Compass" size={14} />
