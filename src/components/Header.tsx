@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FREE_DREAMS, useDreamWallet } from '@/hooks/use-dream-wallet';
 
 const NAV = [
+  { id: 'oracle', label: 'Карта дня' },
   { id: 'chat', label: 'Чат' },
   { id: 'history', label: 'История' },
   { id: 'symbols', label: 'Словарь' },
@@ -15,7 +16,7 @@ const NAV = [
 const Header = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { left, hasAccess } = useDreamWallet();
+  const { user, left, hasAccess } = useDreamWallet();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -67,11 +68,13 @@ const Header = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => go('pricing')}
+            onClick={() => go(user ? 'pricing' : 'account')}
             className="hidden items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 py-2 text-sm text-foreground transition-colors hover:bg-primary/20 sm:flex"
           >
-            <Icon name="Wallet" size={15} className="text-primary" />
-            {hasAccess ? (
+            <Icon name={user ? 'Wallet' : 'LogIn'} size={15} className="text-primary" />
+            {!user ? (
+              <span>Войти</span>
+            ) : hasAccess ? (
               <span>Доступ открыт</span>
             ) : (
               <span>

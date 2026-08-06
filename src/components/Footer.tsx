@@ -2,6 +2,7 @@ import Icon from '@/components/ui/icon';
 import { PRICE } from '@/hooks/use-dream-wallet';
 
 const LINKS = [
+  { id: 'oracle', label: 'Карта дня' },
   { id: 'chat', label: 'Чат' },
   { id: 'history', label: 'История' },
   { id: 'symbols', label: 'Словарь' },
@@ -25,7 +26,7 @@ const Footer = () => (
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             Чат-бот для толкования снов с искусственным интеллектом. Три сна бесплатно,
-            полный доступ — {PRICE} ₽ навсегда.
+            полный доступ — {PRICE} ₽ на 3 года.
           </p>
         </div>
 

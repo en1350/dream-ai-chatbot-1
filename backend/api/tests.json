@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Неизвестное действие",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "nope"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Короткий пароль при регистрации",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "register", "email": "test@dream.ru", "password": "123"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Статус без входа",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "status"},
+      "expectedStatus": 400
+    }
+  ]
+}

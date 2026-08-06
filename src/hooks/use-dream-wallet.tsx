@@ -1,7 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import func2url from '../../backend/func2url.json';
 
 export const FREE_DREAMS = 3;
 export const PRICE = 299;
+export const ACCESS_YEARS = 3;
+
+const API_URL = func2url.api;
 
 export interface DreamRecord {
   id: string;
@@ -12,107 +16,216 @@ export interface DreamRecord {
   symbols: string[];
 }
 
+export interface DreamUser {
+  user_id: number;
+  email: string;
+  token: string;
+}
+
 interface WalletState {
+  user: DreamUser | null;
   used: number;
   left: number;
   hasAccess: boolean;
+  accessUntil: string | null;
   history: DreamRecord[];
-  activatedAt: string | null;
-  spend: () => boolean;
+  authLoading: boolean;
+  payLoading: boolean;
+  login: (email: string, password: string) => Promise<{ error?: string }>;
+  register: (email: string, password: string) => Promise<{ error?: string }>;
+  logout: () => void;
+  spend: () => Promise<boolean>;
   addDream: (dream: DreamRecord) => void;
-  buyAccess: () => void;
+  buyAccess: () => Promise<{ error?: string }>;
+  refresh: () => Promise<void>;
   reset: () => void;
 }
 
-const STORAGE_KEY = 'morpheus-wallet-v1';
+const USER_KEY = 'morpheus-user-v2';
+const HISTORY_KEY = 'morpheus-history-v2';
 
 const WalletContext = createContext<WalletState | null>(null);
 
-interface Persisted {
-  used: number;
-  hasAccess: boolean;
-  history: DreamRecord[];
-  activatedAt: string | null;
-}
-
-const readStorage = (): Persisted => {
-  if (typeof window === 'undefined') {
-    return { used: 0, hasAccess: false, history: [], activatedAt: null };
-  }
+const readJSON = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { used: 0, hasAccess: false, history: [], activatedAt: null };
-    const parsed = JSON.parse(raw) as Partial<Persisted>;
-    return {
-      used: typeof parsed.used === 'number' ? parsed.used : 0,
-      hasAccess: Boolean(parsed.hasAccess),
-      history: Array.isArray(parsed.history) ? parsed.history : [],
-      activatedAt: typeof parsed.activatedAt === 'string' ? parsed.activatedAt : null,
-    };
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return { used: 0, hasAccess: false, history: [], activatedAt: null };
+    return fallback;
   }
 };
 
+const call = async (payload: Record<string, unknown>) => {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data } as { ok: boolean; data: Record<string, unknown> };
+};
+
 export const DreamWalletProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = useState<Persisted>(() => readStorage());
+  const [user, setUser] = useState<DreamUser | null>(() => readJSON<DreamUser | null>(USER_KEY, null));
+  const [used, setUsed] = useState(0);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessUntil, setAccessUntil] = useState<string | null>(null);
+  const [history, setHistory] = useState<DreamRecord[]>(() => readJSON<DreamRecord[]>(HISTORY_KEY, []));
+  const [authLoading, setAuthLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     } catch {
-      /* приватный режим — просто живём в памяти */
+      /* приватный режим */
     }
-  }, [state]);
+  }, [history]);
 
-  const left = Math.max(0, FREE_DREAMS - state.used);
-
-  const spend = useCallback(() => {
-    let allowed = false;
-    setState((prev) => {
-      if (prev.hasAccess) {
-        allowed = true;
-        return prev;
-      }
-      if (prev.used < FREE_DREAMS) {
-        allowed = true;
-        return { ...prev, used: prev.used + 1 };
-      }
-      allowed = false;
-      return prev;
-    });
-    return allowed;
+  const applyAccess = useCallback((data: Record<string, unknown>) => {
+    if (typeof data.free_used === 'number') setUsed(data.free_used);
+    if (typeof data.has_access === 'boolean') setHasAccess(data.has_access);
+    setAccessUntil(typeof data.access_until === 'string' ? data.access_until : null);
   }, []);
+
+  const saveUser = useCallback((next: DreamUser | null) => {
+    setUser(next);
+    try {
+      if (next) window.localStorage.setItem(USER_KEY, JSON.stringify(next));
+      else window.localStorage.removeItem(USER_KEY);
+    } catch {
+      /* приватный режим */
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    const { ok, data } = await call({ action: 'check_payment', user_id: user.user_id });
+    if (ok) applyAccess(data);
+  }, [user, applyAccess]);
+
+  useEffect(() => {
+    if (!user) {
+      setUsed(0);
+      setHasAccess(false);
+      setAccessUntil(null);
+      return;
+    }
+    call({ action: 'status', user_id: user.user_id }).then(({ ok, data }) => {
+      if (ok) applyAccess(data);
+    });
+  }, [user, applyAccess]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (new URLSearchParams(window.location.search).get('paid') !== '1') return;
+    refresh().then(() => {
+      window.history.replaceState({}, '', window.location.pathname);
+    });
+  }, [user, refresh]);
+
+  const auth = useCallback(
+    async (action: 'login' | 'register', email: string, password: string) => {
+      setAuthLoading(true);
+      try {
+        const { ok, data } = await call({ action, email, password });
+        if (!ok) return { error: (data.error as string) || 'Не получилось, попробуйте ещё раз' };
+        saveUser({
+          user_id: data.user_id as number,
+          email: data.email as string,
+          token: data.token as string,
+        });
+        applyAccess(data);
+        return {};
+      } catch {
+        return { error: 'Сервер не отвечает, попробуйте позже' };
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [saveUser, applyAccess],
+  );
+
+  const login = useCallback((e: string, p: string) => auth('login', e, p), [auth]);
+  const register = useCallback((e: string, p: string) => auth('register', e, p), [auth]);
+
+  const logout = useCallback(() => saveUser(null), [saveUser]);
+
+  const spend = useCallback(async () => {
+    if (!user) return false;
+    const { ok, data } = await call({ action: 'spend', user_id: user.user_id });
+    if (!ok) return false;
+    applyAccess(data);
+    return Boolean(data.allowed);
+  }, [user, applyAccess]);
 
   const addDream = useCallback((dream: DreamRecord) => {
-    setState((prev) => ({ ...prev, history: [dream, ...prev.history].slice(0, 40) }));
+    setHistory((prev) => [dream, ...prev].slice(0, 40));
   }, []);
 
-  const buyAccess = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      hasAccess: true,
-      activatedAt: prev.activatedAt ?? new Date().toISOString(),
-    }));
-  }, []);
+  const buyAccess = useCallback(async () => {
+    if (!user) return { error: 'Сначала войдите в кабинет' };
+    setPayLoading(true);
+    try {
+      const { ok, data } = await call({
+        action: 'create_payment',
+        user_id: user.user_id,
+        email: user.email,
+      });
+      if (!ok || !data.confirmation_url) {
+        return { error: (data.error as string) || 'Не удалось создать платёж' };
+      }
+      window.location.href = data.confirmation_url as string;
+      return {};
+    } catch {
+      return { error: 'Платёжная система недоступна' };
+    } finally {
+      setPayLoading(false);
+    }
+  }, [user]);
 
-  const reset = useCallback(() => {
-    setState({ used: 0, hasAccess: false, history: [], activatedAt: null });
-  }, []);
+  const reset = useCallback(() => setHistory([]), []);
+
+  const left = Math.max(0, FREE_DREAMS - used);
 
   const value = useMemo<WalletState>(
     () => ({
-      used: state.used,
+      user,
+      used,
       left,
-      hasAccess: state.hasAccess,
-      history: state.history,
-      activatedAt: state.activatedAt,
+      hasAccess,
+      accessUntil,
+      history,
+      authLoading,
+      payLoading,
+      login,
+      register,
+      logout,
       spend,
       addDream,
       buyAccess,
+      refresh,
       reset,
     }),
-    [state, left, spend, addDream, buyAccess, reset],
+    [
+      user,
+      used,
+      left,
+      hasAccess,
+      accessUntil,
+      history,
+      authLoading,
+      payLoading,
+      login,
+      register,
+      logout,
+      spend,
+      addDream,
+      buyAccess,
+      refresh,
+      reset,
+    ],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
@@ -123,5 +236,3 @@ export const useDreamWallet = () => {
   if (!ctx) throw new Error('useDreamWallet должен вызываться внутри DreamWalletProvider');
   return ctx;
 };
-
-export const spendGuard = (allowed: boolean) => allowed;

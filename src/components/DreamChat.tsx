@@ -30,8 +30,11 @@ const greeting: Message = {
 const openPricing = () =>
   document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+const openAccount = () =>
+  document.getElementById('account')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
 const DreamChat = () => {
-  const { left, hasAccess, spend, addDream } = useDreamWallet();
+  const { user, left, hasAccess, spend, addDream } = useDreamWallet();
   const [messages, setMessages] = useState<Message[]>([greeting]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -42,7 +45,7 @@ const DreamChat = () => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, typing]);
 
-  const send = () => {
+  const send = async () => {
     const value = input.trim();
     if (value.length < 12) {
       setError('Опишите сон чуть подробнее — минимум 12 символов.');
@@ -50,16 +53,30 @@ const DreamChat = () => {
     }
     setError('');
 
+    if (!user) {
+      toast({
+        title: 'Нужен вход в кабинет',
+        description: 'Зарегистрируйтесь по почте — три первых сна бесплатно.',
+      });
+      openAccount();
+      return;
+    }
+
     if (!hasAccess && left <= 0) {
       toast({
         title: 'Бесплатные сны закончились',
-        description: 'Откройте безлимитный доступ — 299 ₽ один раз и навсегда.',
+        description: 'Откройте полный доступ — 299 ₽ на весь период.',
       });
       openPricing();
       return;
     }
 
-    if (!spend()) {
+    const allowed = await spend();
+    if (!allowed) {
+      toast({
+        title: 'Бесплатные сны закончились',
+        description: 'Откройте полный доступ — 299 ₽ на весь период.',
+      });
       openPricing();
       return;
     }
@@ -119,7 +136,7 @@ const DreamChat = () => {
             </div>
             <span className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs">
               <Icon name="Wallet" size={13} className="text-primary" />
-              {hasAccess ? 'Безлимит' : `${left} / ${FREE_DREAMS}`}
+              {!user ? 'войдите' : hasAccess ? 'Безлимит' : `${left} / ${FREE_DREAMS}`}
             </span>
           </div>
 
@@ -202,13 +219,22 @@ const DreamChat = () => {
               </Button>
             </div>
             {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-            {!hasAccess && left === 0 && (
+            {!user && (
+              <button
+                onClick={openAccount}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-primary/20"
+              >
+                <Icon name="UserPlus" size={15} />
+                Зарегистрируйтесь по почте — 3 сна бесплатно
+              </button>
+            )}
+            {user && !hasAccess && left === 0 && (
               <button
                 onClick={openPricing}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm text-primary transition-colors hover:bg-primary/20"
               >
                 <Icon name="Sparkles" size={15} />
-                Бесплатные сны закончились — открыть безлимит за 299 ₽
+                Бесплатные сны закончились — открыть доступ за 299 ₽
               </button>
             )}
           </div>

@@ -14,19 +14,25 @@ const FULL_FEATURES = [
   'Глубокий разбор с архетипами и настроением',
   'Личный архив без ограничений',
   'Все будущие обновления сонника',
-  'Никаких подписок и списаний',
+  'Один платёж на 3 года — без автопродления',
 ];
 
 const Pricing = () => {
-  const { left, hasAccess, buyAccess } = useDreamWallet();
+  const { user, left, hasAccess, buyAccess, payLoading } = useDreamWallet();
 
-  const handleBuy = () => {
-    buyAccess();
-    toast({
-      title: 'Доступ открыт навсегда',
-      description: 'Толкований больше не считаем — рассказывайте столько снов, сколько приснится.',
-    });
-    document.getElementById('account')?.scrollIntoView({ behavior: 'smooth' });
+  const handleBuy = async () => {
+    if (!user) {
+      toast({
+        title: 'Сначала войдите',
+        description: 'Регистрация по почте занимает полминуты.',
+      });
+      document.getElementById('account')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    const result = await buyAccess();
+    if (result.error) {
+      toast({ title: 'Не получилось', description: result.error });
+    }
   };
 
   return (
@@ -36,10 +42,10 @@ const Pricing = () => {
           <p className="text-[11px] uppercase tracking-[0.28em] text-primary">Кошелёк снов</p>
           <h2 className="mt-4 font-display text-4xl font-light md:text-5xl">
             Три сна бесплатно,{' '}
-            <span className="gold-text italic font-semibold">дальше {PRICE} ₽ навсегда</span>
+            <span className="gold-text italic font-semibold">дальше {PRICE} ₽ на 3 года</span>
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Один платёж — и счётчик исчезает. Ни подписки, ни автопродления, ни срока окончания.
+            Один платёж — и счётчик исчезает на весь период. Ни подписки, ни автопродления.
           </p>
         </div>
 
@@ -77,7 +83,7 @@ const Pricing = () => {
               </span>
               <p className="mt-5 font-display text-6xl font-light gold-text">{PRICE} ₽</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Единоразово. Пожизненный доступ на весь период.
+                Единоразово. Полный доступ на 3 года.
               </p>
               <ul className="mt-7 space-y-3 text-sm">
                 {FULL_FEATURES.map((f) => (
@@ -93,13 +99,17 @@ const Pricing = () => {
                   Доступ уже активен
                 </div>
               ) : (
-                <Button onClick={handleBuy} className="mt-8 h-12 w-full rounded-full text-base">
-                  <Icon name="Wallet" size={17} className="mr-2" />
-                  Открыть навсегда
+                <Button
+                  onClick={handleBuy}
+                  disabled={payLoading}
+                  className="mt-8 h-12 w-full rounded-full text-base"
+                >
+                  <Icon name={payLoading ? 'Loader' : 'Wallet'} size={17} className={`mr-2 ${payLoading ? 'animate-spin' : ''}`} />
+                  {payLoading ? 'Готовим оплату…' : `Оплатить ${PRICE} ₽`}
                 </Button>
               )}
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                Оплата картой или СБП · возврат в течение 14 дней
+                Оплата картой или СБП через ЮКассу · возврат в течение 14 дней
               </p>
             </div>
           </div>

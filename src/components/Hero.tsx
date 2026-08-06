@@ -33,7 +33,7 @@ const Hero = () => {
           <p className="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
             Чат-бот разбирает ночной сюжет на архетипы, читает интонацию и возвращает толкование
             обычными словами — без гаданий и суеверий. Первые {FREE_DREAMS} сна бесплатно,
-            дальше — {PRICE} ₽ навсегда.
+            дальше — {PRICE} ₽ на весь период.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -48,10 +48,11 @@ const Hero = () => {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => go('symbols')}
+              onClick={() => go('oracle')}
               className="h-12 rounded-full border-border bg-transparent px-7 text-base"
             >
-              Словарь символов
+              <Icon name="Sparkles" size={17} className="mr-2 text-primary" />
+              Предсказание дня
             </Button>
           </div>
 

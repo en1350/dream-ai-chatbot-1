@@ -1,5 +1,6 @@
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
+import DailyOracle from '@/components/DailyOracle';
 import DreamChat from '@/components/DreamChat';
 import DreamHistory from '@/components/DreamHistory';
 import SymbolDictionary from '@/components/SymbolDictionary';
@@ -16,6 +17,7 @@ const Index = () => (
       <Header />
       <main>
         <Hero />
+        <DailyOracle />
         <DreamChat />
         <DreamHistory />
         <SymbolDictionary />
