@@ -88,7 +88,7 @@ const SECTIONS = [
 • Удалить свой аккаунт вместе со всеми связанными данными
 • Обжаловать действия оператора в Роскомнадзоре или в судебном порядке
 
-Для реализации любого из этих прав напишите нам на адрес, указанный в разделе «Контакты». Мы отвечаем в течение 30 календарных дней.`,
+Для реализации любого из этих прав напишите нам на sonnik_ai@bot-flow.ru. Мы отвечаем в течение 30 календарных дней.`,
   },
   {
     id: 's8',
@@ -168,16 +168,12 @@ const Privacy = () => {
             <Button
               variant="outline"
               className="mt-4 rounded-full border-border bg-transparent"
-              onClick={() => {
-                navigate('/');
-                window.setTimeout(
-                  () => document.getElementById('contacts')?.scrollIntoView({ behavior: 'smooth' }),
-                  100,
-                );
-              }}
+              asChild
             >
-              <Icon name="Mail" size={16} className="mr-2" />
-              Написать нам
+              <a href="mailto:sonnik_ai@bot-flow.ru">
+                <Icon name="Mail" size={16} className="mr-2" />
+                sonnik_ai@bot-flow.ru
+              </a>
             </Button>
           </div>
         </div>

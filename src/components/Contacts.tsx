@@ -6,18 +6,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import func2url from '../../backend/func2url.json';
+
+const FEEDBACK_URL = func2url.feedback;
+
+export const SUPPORT_EMAIL = 'sonnik_ai@bot-flow.ru';
 
 const CHANNELS = [
-  { icon: 'Mail', title: 'Почта', value: 'hello@sonnikai.ru', hint: 'ответим за 1 день' },
-  { icon: 'Send', title: 'Телеграм', value: '@sonnikai', hint: 'быстрее всего' },
-  { icon: 'MessageCircleQuestion', title: 'Поддержка', value: 'help@sonnikai.ru', hint: 'оплата и доступ' },
+  {
+    icon: 'Mail',
+    title: 'Почта',
+    value: SUPPORT_EMAIL,
+    hint: 'ответим в течение дня',
+    href: `mailto:${SUPPORT_EMAIL}`,
+  },
+  {
+    icon: 'MessageCircleQuestion',
+    title: 'Поддержка',
+    value: SUPPORT_EMAIL,
+    hint: 'оплата и доступ',
+    href: `mailto:${SUPPORT_EMAIL}?subject=Вопрос по доступу`,
+  },
 ];
 
 const Contacts = () => {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: Record<string, string> = {};
     if (form.name.trim().length < 2) next.name = 'Как к вам обращаться?';
@@ -26,11 +43,35 @@ const Contacts = () => {
     setErrors(next);
     if (Object.keys(next).length) return;
 
-    toast({
-      title: 'Письмо отправлено',
-      description: 'СонникАИ прочитает его до следующего рассвета.',
-    });
-    setForm({ name: '', email: '', message: '' });
+    setSending(true);
+    try {
+      const res = await fetch(FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: 'Письмо не ушло',
+          description:
+            (data.error as string) || `Напишите напрямую на ${SUPPORT_EMAIL}`,
+        });
+        return;
+      }
+      toast({
+        title: 'Письмо отправлено',
+        description: 'СонникАИ прочитает его до следующего рассвета.',
+      });
+      setForm({ name: '', email: '', message: '' });
+    } catch {
+      toast({
+        title: 'Письмо не ушло',
+        description: `Проверьте интернет или напишите на ${SUPPORT_EMAIL}`,
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -49,20 +90,21 @@ const Contacts = () => {
 
             <div className="mt-9 space-y-3">
               {CHANNELS.map((c) => (
-                <div
+                <a
                   key={c.title}
-                  className="flex items-center gap-4 rounded-2xl border border-border bg-card/50 px-5 py-4 transition-colors hover:border-primary/35"
+                  href={c.href}
+                  className="group flex items-center gap-4 rounded-2xl border border-border bg-card/50 px-5 py-4 transition-colors hover:border-primary/35"
                 >
                   <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/12 text-primary">
                     <Icon name={c.icon} size={19} />
                   </span>
                   <div className="leading-tight">
-                    <p className="text-sm">{c.value}</p>
+                    <p className="text-sm transition-colors group-hover:text-primary">{c.value}</p>
                     <p className="text-xs text-muted-foreground">
                       {c.title} · {c.hint}
                     </p>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
@@ -106,9 +148,17 @@ const Contacts = () => {
               />
               {errors.message && <p className="text-xs text-destructive">{errors.message}</p>}
             </div>
-            <Button type="submit" className="mt-6 h-12 w-full rounded-full text-base">
-              <Icon name="Send" size={17} className="mr-2" />
-              Отправить письмо
+            <Button
+              type="submit"
+              disabled={sending}
+              className="mt-6 h-12 w-full rounded-full text-base"
+            >
+              <Icon
+                name={sending ? 'Loader' : 'Send'}
+                size={17}
+                className={`mr-2 ${sending ? 'animate-spin' : ''}`}
+              />
+              {sending ? 'Отправляем…' : 'Отправить письмо'}
             </Button>
             <p className="mt-4 text-center text-xs text-muted-foreground">
               Отправляя форму, вы соглашаетесь с обработкой персональных данных в соответствии с{' '}

@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Пустое имя",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "", "email": "a@b.ru", "message": "Здравствуйте, вопрос по доступу"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Некорректная почта",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Анна", "email": "не-почта", "message": "Здравствуйте, вопрос по доступу"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Слишком короткое сообщение",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Анна", "email": "anna@mail.ru", "message": "ок"},
+      "expectedStatus": 400
+    }
+  ]
+}
