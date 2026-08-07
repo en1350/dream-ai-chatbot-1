@@ -6,10 +6,10 @@ from email.utils import formataddr
 
 SMTP_HOST = os.environ.get('SMTP_HOST', '')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', '465'))
-SMTP_USER = os.environ.get('SMTP_USER', '')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 
 INBOX = 'sonnik_ai@bot-flow.ru'
+SMTP_USER = os.environ.get('SMTP_USER') or INBOX
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -47,7 +47,7 @@ def handler(event: dict, context) -> dict:
     if len(message) < 10:
         return reply(400, {'error': 'Опишите вопрос подробнее'})
 
-    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD:
+    if not SMTP_HOST or not SMTP_PASSWORD:
         print('SMTP credentials are not configured')
         return reply(503, {'error': 'Отправка писем временно недоступна'})
 
@@ -63,21 +63,32 @@ def handler(event: dict, context) -> dict:
         f'Сообщение:\n{message}\n'
     )
 
-    try:
-        if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as smtp:
-                smtp.login(SMTP_USER, SMTP_PASSWORD)
-                smtp.send_message(letter)
-        else:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as smtp:
-                smtp.starttls()
-                smtp.login(SMTP_USER, SMTP_PASSWORD)
-                smtp.send_message(letter)
-    except smtplib.SMTPAuthenticationError:
-        print('SMTP auth failed')
-        return reply(502, {'error': 'Не удалось отправить письмо'})
-    except Exception as e:
-        print(f'SMTP error: {e}')
-        return reply(502, {'error': 'Не удалось отправить письмо'})
+    attempts = [(SMTP_PORT, SMTP_PORT == 465)]
+    if SMTP_PORT == 465:
+        attempts.append((587, False))
+    else:
+        attempts.append((465, True))
 
-    return reply(200, {'sent': True})
+    last_error = ''
+    print(f'SMTP target: host={SMTP_HOST} user={SMTP_USER} attempts={attempts}')
+    for port, use_ssl in attempts:
+        try:
+            if use_ssl:
+                with smtplib.SMTP_SSL(SMTP_HOST, port, timeout=15) as smtp:
+                    smtp.login(SMTP_USER, SMTP_PASSWORD)
+                    smtp.send_message(letter)
+            else:
+                with smtplib.SMTP(SMTP_HOST, port, timeout=15) as smtp:
+                    smtp.starttls()
+                    smtp.login(SMTP_USER, SMTP_PASSWORD)
+                    smtp.send_message(letter)
+            print(f'Mail sent via {SMTP_HOST}:{port}')
+            return reply(200, {'sent': True})
+        except smtplib.SMTPAuthenticationError as e:
+            print(f'SMTP auth failed on port {port}: {e}')
+            return reply(502, {'error': 'Не удалось отправить письмо'})
+        except Exception as e:
+            last_error = f'{type(e).__name__}: {e}'
+            print(f'SMTP error on port {port}: {last_error}')
+
+    return reply(502, {'error': 'Не удалось отправить письмо', 'debug': last_error})
