@@ -122,10 +122,26 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!user) return;
     if (new URLSearchParams(window.location.search).get('paid') !== '1') return;
-    refresh().then(() => {
-      window.history.replaceState({}, '', window.location.pathname);
-    });
-  }, [user, refresh]);
+
+    let cancelled = false;
+    const check = async (attempt = 0) => {
+      if (cancelled) return;
+      const { ok, data } = await call({ action: 'check_payment', user_id: user.user_id });
+      if (cancelled) return;
+      if (ok) applyAccess(data);
+      if (ok && data.has_access) {
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+      if (attempt < 5) window.setTimeout(() => check(attempt + 1), 3000);
+      else window.history.replaceState({}, '', window.location.pathname);
+    };
+    check();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, applyAccess]);
 
   const auth = useCallback(
     async (action: 'login' | 'register', email: string, password: string) => {
@@ -185,6 +201,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
         action: 'create_payment',
         user_id: user.user_id,
         email: user.email,
+        return_url: window.location.origin,
       });
       if (!ok || !data.confirmation_url) {
         return { error: (data.error as string) || 'Не удалось создать платёж' };

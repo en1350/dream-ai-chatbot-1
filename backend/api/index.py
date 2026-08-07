@@ -19,7 +19,7 @@ AI_KEY = os.environ.get('AITUNNEL_API_KEY', '')
 FREE_DREAMS = 3
 PRICE = '299.00'
 ACCESS_DAYS = 1095
-SITE_URL = 'https://preview--dream-ai-chatbot.poehali.dev'
+SITE_URL = os.environ.get('SITE_URL', 'https://preview--dream-ai-chatbot-1.poehali.dev')
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -272,23 +272,28 @@ def handle_create_payment(body: dict) -> dict:
     """Создаёт платёж в ЮКассе на 299 рублей за доступ на 3 года."""
     user_id = body.get('user_id')
     email = (body.get('email') or '').strip().lower()
+    return_url = (body.get('return_url') or '').strip()
     if not user_id:
         return fail(400, 'Требуется вход в кабинет')
     if not SHOP_ID or not YK_SECRET:
         return fail(503, 'Оплата пока не настроена')
 
+    if not return_url.startswith('https://'):
+        return_url = SITE_URL
+    return_url = return_url.split('?')[0].rstrip('/')
+
     pdata = {
         'amount': {'value': PRICE, 'currency': 'RUB'},
-        'confirmation': {'type': 'redirect', 'return_url': f'{SITE_URL}/?paid=1'},
+        'confirmation': {'type': 'redirect', 'return_url': f'{return_url}/?paid=1'},
         'capture': True,
-        'description': 'Морфей — полный доступ на 3 года',
+        'description': 'СонникАИ — полный доступ на 3 года',
         'metadata': {'user_id': str(user_id)},
     }
     if email:
         pdata['receipt'] = {
             'customer': {'email': email},
             'items': [{
-                'description': 'Морфей — полный доступ на 3 года',
+                'description': 'СонникАИ — полный доступ на 3 года',
                 'quantity': '1.00',
                 'amount': {'value': PRICE, 'currency': 'RUB'},
                 'vat_code': 1,
@@ -379,6 +384,11 @@ def handle_check_payment(body: dict) -> dict:
             continue
 
         status = result.get('status')
+        cancel = result.get('cancellation_details') or {}
+        print(
+            f'YK check {payment_id}: status={status} '
+            f'paid={result.get("paid")} reason={cancel.get("reason")} party={cancel.get("party")}'
+        )
         if status and status != 'pending':
             cur.execute(
                 'UPDATE payments SET status=%s, paid_at=NOW() WHERE yookassa_payment_id=%s',
@@ -419,7 +429,7 @@ def handle_webhook(body: dict) -> dict:
 
 
 def handler(event: dict, context) -> dict:
-    """Морфей: регистрация по почте, счётчик бесплатных снов и оплата доступа через ЮКассу."""
+    """СонникАИ: регистрация по почте, счётчик бесплатных снов и оплата доступа через ЮКассу."""
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
