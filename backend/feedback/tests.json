@@ -26,6 +26,15 @@
       "path": "/",
       "body": {"name": "Анна", "email": "anna@mail.ru", "message": "ок"},
       "expectedStatus": 400
+    },
+    {
+      "name": "Корректная заявка сохраняется",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Автотест", "email": "autotest@example.com", "message": "Проверка сохранения заявки в базу данных сайта."},
+      "expectedStatus": 200,
+      "expectedBody": {"sent": true},
+      "bodyMatcher": "partial"
     }
   ]
 }
