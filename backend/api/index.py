@@ -407,17 +407,47 @@ def handle_check_payment(body: dict) -> dict:
 
 def handle_webhook(body: dict) -> dict:
     """Вебхук ЮКассы — открывает доступ сразу после оплаты."""
-    if body.get('event') != 'payment.succeeded':
-        return ok({'ok': True})
-
-    obj = body.get('object', {})
+    event_name = body.get('event')
+    obj = body.get('object') or {}
     payment_id = obj.get('id')
-    user_id = obj.get('metadata', {}).get('user_id')
-    if not payment_id or not user_id:
+    print(f'YK webhook: event={event_name} payment={payment_id}')
+
+    if not payment_id:
         return ok({'ok': True})
 
     conn = get_conn()
     cur = conn.cursor()
+
+    if event_name in ('payment.canceled', 'payment.waiting_for_capture'):
+        status = 'canceled' if event_name == 'payment.canceled' else 'pending'
+        cur.execute(
+            'UPDATE payments SET status=%s WHERE yookassa_payment_id=%s',
+            (status, payment_id),
+        )
+        cur.close()
+        conn.close()
+        return ok({'ok': True})
+
+    if event_name != 'payment.succeeded':
+        cur.close()
+        conn.close()
+        return ok({'ok': True})
+
+    user_id = (obj.get('metadata') or {}).get('user_id')
+    if not user_id:
+        cur.execute(
+            'SELECT user_id FROM payments WHERE yookassa_payment_id=%s LIMIT 1',
+            (payment_id,),
+        )
+        row = cur.fetchone()
+        user_id = row[0] if row else None
+
+    if not user_id:
+        print(f'YK webhook: user not found for payment {payment_id}')
+        cur.close()
+        conn.close()
+        return ok({'ok': True})
+
     cur.execute(
         'UPDATE payments SET status=%s, paid_at=NOW() WHERE yookassa_payment_id=%s',
         ('succeeded', payment_id),
@@ -435,6 +465,9 @@ def handler(event: dict, context) -> dict:
 
     body = json.loads(event.get('body') or '{}')
     action = body.get('action', '')
+
+    if not action and body.get('event') and isinstance(body.get('object'), dict):
+        return handle_webhook(body)
 
     if action in ('register', 'login'):
         return handle_auth(body)
