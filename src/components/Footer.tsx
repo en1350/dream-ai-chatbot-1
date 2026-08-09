@@ -47,7 +47,11 @@ const Footer = () => (
         </nav>
       </div>
 
-      <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row">
+      <p className="mt-10 border-t border-border/60 pt-6 text-center text-xs text-muted-foreground/80 sm:text-left">
+        Контент сайта носит развлекательный характер.
+      </p>
+
+      <div className="mt-5 flex flex-col items-center justify-between gap-4 text-xs text-muted-foreground sm:flex-row">
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-5">
           <p>© {new Date().getFullYear()} СонникАИ. Сны остаются вашими.</p>
           <Link to="/privacy" className="transition-colors hover:text-primary">
