@@ -72,7 +72,7 @@ def call_ai(dream: str, moon_phase: str = '', card: str = '') -> str:
         user_content += f'\n\n(Контекст для толкования: {context})'
 
     payload = json.dumps({
-        'model': 'claude-sonnet-4.6',
+        'model': 'gemini-2.5-flash',
         'messages': [
             {'role': 'system', 'content': SYSTEM_PROMPT},
             {'role': 'user', 'content': user_content},
