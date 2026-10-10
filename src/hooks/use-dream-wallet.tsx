@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import func2url from '../../backend/func2url.json';
+import { toast } from '@/hooks/use-toast';
 
 export const FREE_DREAMS = 3;
 export const PRICE = 299;
@@ -22,6 +23,12 @@ export interface DreamUser {
   token: string;
 }
 
+export interface AuthResult {
+  error?: string;
+  notVerified?: boolean;
+  verificationSent?: boolean;
+}
+
 interface WalletState {
   user: DreamUser | null;
   used: number;
@@ -31,8 +38,9 @@ interface WalletState {
   history: DreamRecord[];
   authLoading: boolean;
   payLoading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (email: string, password: string) => Promise<{ error?: string }>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (email: string, password: string) => Promise<AuthResult>;
+  resendVerification: (email: string) => Promise<{ error?: string }>;
   logout: () => void;
   spend: () => Promise<boolean>;
   syncAccess: (data: Record<string, unknown>) => void;
@@ -143,12 +151,60 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
     };
   }, [user, applyAccess]);
 
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('verify');
+    if (!token) return;
+    call({ action: 'verify_email', token }).then(({ ok, data }) => {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (!ok) {
+        toast({
+          title: 'Не удалось подтвердить почту',
+          description: (data.error as string) || 'Запросите новое письмо',
+          variant: 'destructive',
+        });
+        return;
+      }
+      saveUser({
+        user_id: data.user_id as number,
+        email: data.email as string,
+        token: data.token as string,
+      });
+      applyAccess(data);
+      toast({ title: 'Почта подтверждена', description: 'Добро пожаловать в СонникАИ!' });
+    });
+  }, [saveUser, applyAccess]);
+
+  const resendVerification = useCallback(async (email: string) => {
+    try {
+      const { ok, data } = await call({
+        action: 'resend_verification',
+        email,
+        return_url: window.location.origin,
+      });
+      if (!ok) return { error: (data.error as string) || 'Не получилось отправить письмо' };
+      return {};
+    } catch {
+      return { error: 'Сервер не отвечает, попробуйте позже' };
+    }
+  }, []);
+
   const auth = useCallback(
     async (action: 'login' | 'register', email: string, password: string) => {
       setAuthLoading(true);
       try {
-        const { ok, data } = await call({ action, email, password });
-        if (!ok) return { error: (data.error as string) || 'Не получилось, попробуйте ещё раз' };
+        const { ok, data } = await call({
+          action,
+          email,
+          password,
+          return_url: window.location.origin,
+        });
+        if (!ok) {
+          return {
+            error: (data.error as string) || 'Не получилось, попробуйте ещё раз',
+            notVerified: data.code === 'email_not_verified',
+          };
+        }
+        if (data.verification_sent) return { verificationSent: true };
         saveUser({
           user_id: data.user_id as number,
           email: data.email as string,
@@ -231,6 +287,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
       payLoading,
       login,
       register,
+      resendVerification,
       logout,
       spend,
       syncAccess: applyAccess,
@@ -250,6 +307,7 @@ export const DreamWalletProvider = ({ children }: { children: React.ReactNode })
       payLoading,
       login,
       register,
+      resendVerification,
       logout,
       spend,
       applyAccess,

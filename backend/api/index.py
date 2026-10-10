@@ -6,6 +6,9 @@ import hashlib
 import secrets
 import urllib.request
 import urllib.error
+import smtplib
+from email.message import EmailMessage
+from email.utils import formataddr
 from datetime import datetime, timedelta
 
 import psycopg2
@@ -15,6 +18,10 @@ SCHEMA = os.environ.get('MAIN_DB_SCHEMA', 'public')
 SHOP_ID = os.environ.get('YOOKASSA_SHOP_ID', '')
 YK_SECRET = os.environ.get('YOOKASSA_SECRET_KEY', '')
 AI_KEY = os.environ.get('AITUNNEL_API_KEY', '')
+SMTP_HOST = os.environ.get('SMTP_HOST', '')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '465'))
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_USER = os.environ.get('SMTP_USER') or 'sonnik_ai@bot-flow.ru'
 
 FREE_DREAMS = 3
 PRICE = '299.00'
@@ -136,6 +143,110 @@ def read_access(cur, user_id: int) -> dict:
     }
 
 
+def send_verification_mail(to_email: str, link: str) -> bool:
+    if not SMTP_HOST or not SMTP_PASSWORD:
+        print('SMTP is not configured')
+        return False
+
+    letter = EmailMessage()
+    letter['Subject'] = 'СонникАИ · подтвердите почту'
+    letter['From'] = formataddr(('СонникАИ', SMTP_USER))
+    letter['To'] = to_email
+    letter.set_content(
+        'Добро пожаловать в СонникАИ!\n\n'
+        'Чтобы завершить регистрацию, подтвердите почту по ссылке:\n'
+        f'{link}\n\n'
+        'Ссылка действует 24 часа. Если вы не регистрировались, просто проигнорируйте это письмо.\n'
+    )
+
+    attempts = [(SMTP_PORT, SMTP_PORT == 465)]
+    attempts.append((587, False) if SMTP_PORT == 465 else (465, True))
+    for port, use_ssl in attempts:
+        try:
+            if use_ssl:
+                with smtplib.SMTP_SSL(SMTP_HOST, port, timeout=8) as smtp:
+                    smtp.login(SMTP_USER, SMTP_PASSWORD)
+                    smtp.send_message(letter)
+            else:
+                with smtplib.SMTP(SMTP_HOST, port, timeout=8) as smtp:
+                    smtp.starttls()
+                    smtp.login(SMTP_USER, SMTP_PASSWORD)
+                    smtp.send_message(letter)
+            return True
+        except Exception as e:
+            print(f'SMTP error on {SMTP_HOST}:{port} — {type(e).__name__}: {e}')
+    return False
+
+
+def issue_verification(cur, user_id: int, email: str, return_url) -> bool:
+    base = (return_url or '').strip().rstrip('/')
+    if not base.startswith('https://'):
+        base = SITE_URL
+    token = secrets.token_urlsafe(32)
+    cur.execute(
+        "UPDATE users SET verify_token = %s, verify_expires = NOW() + INTERVAL '24 hours' WHERE id = %s",
+        (token, user_id),
+    )
+    return send_verification_mail(email, f'{base}/?verify={token}')
+
+
+def handle_resend(body: dict) -> dict:
+    """Повторно отправляет письмо с подтверждением почты."""
+    email = (body.get('email') or '').strip().lower()
+    if not email or '@' not in email:
+        return fail(400, 'Укажите корректный адрес почты')
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT id, email_verified FROM users WHERE email = %s', (email,))
+    row = cur.fetchone()
+    if not row or row[1]:
+        cur.close()
+        conn.close()
+        return ok({'verification_sent': True, 'email': email})
+    sent = issue_verification(cur, row[0], email, body.get('return_url'))
+    cur.close()
+    conn.close()
+    if not sent:
+        return fail(502, 'Не удалось отправить письмо, попробуйте позже')
+    return ok({'verification_sent': True, 'email': email})
+
+
+def handle_verify(body: dict) -> dict:
+    """Подтверждает почту по ссылке из письма и сразу входит в кабинет."""
+    token = (body.get('token') or '').strip()
+    if len(token) < 20:
+        return fail(400, 'Ссылка недействительна')
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        'SELECT id, email, verify_expires FROM users WHERE verify_token = %s',
+        (token,),
+    )
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return fail(400, 'Ссылка недействительна или уже использована')
+    if row[2] and row[2] < datetime.utcnow():
+        cur.close()
+        conn.close()
+        return fail(410, 'Срок действия ссылки истёк. Запросите новое письмо')
+    user_id, email = row[0], row[1]
+    cur.execute(
+        'UPDATE users SET email_verified = TRUE, verify_token = NULL, verify_expires = NULL WHERE id = %s',
+        (user_id,),
+    )
+    access = read_access(cur, user_id)
+    cur.close()
+    conn.close()
+    return ok({
+        'token': make_token(user_id, email),
+        'user_id': user_id,
+        'email': email,
+        **access,
+    })
+
+
 def handle_auth(body: dict) -> dict:
     """Регистрация и вход сновидца по почте и паролю."""
     action = body.get('action')
@@ -152,24 +263,46 @@ def handle_auth(body: dict) -> dict:
     cur = conn.cursor()
 
     if action == 'register':
-        cur.execute('SELECT id FROM users WHERE email = %s', (email,))
-        if cur.fetchone():
+        cur.execute('SELECT id, email_verified FROM users WHERE email = %s', (email,))
+        existing = cur.fetchone()
+        if existing and existing[1]:
             cur.close()
             conn.close()
             return fail(409, 'Эта почта уже зарегистрирована — войдите')
-        cur.execute(
-            'INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id',
-            (email, pw_hash),
-        )
-        user_id = cur.fetchone()[0]
-    else:
-        cur.execute('SELECT id, password_hash FROM users WHERE email = %s', (email,))
-        row = cur.fetchone()
-        if not row or row[1] != pw_hash:
-            cur.close()
-            conn.close()
-            return fail(401, 'Неверная почта или пароль')
-        user_id = row[0]
+        if existing:
+            user_id = existing[0]
+            cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (pw_hash, user_id))
+        else:
+            cur.execute(
+                'INSERT INTO users (email, password_hash, email_verified) VALUES (%s, %s, FALSE) RETURNING id',
+                (email, pw_hash),
+            )
+            user_id = cur.fetchone()[0]
+        sent = issue_verification(cur, user_id, email, body.get('return_url'))
+        cur.close()
+        conn.close()
+        if not sent:
+            return fail(502, 'Не удалось отправить письмо. Проверьте адрес почты и попробуйте ещё раз')
+        return ok({'verification_sent': True, 'email': email})
+
+    cur.execute('SELECT id, password_hash, email_verified FROM users WHERE email = %s', (email,))
+    row = cur.fetchone()
+    if not row or row[1] != pw_hash:
+        cur.close()
+        conn.close()
+        return fail(401, 'Неверная почта или пароль')
+    if not row[2]:
+        cur.close()
+        conn.close()
+        return {
+            'statusCode': 403,
+            'headers': CORS,
+            'body': json.dumps(
+                {'error': 'Почта не подтверждена. Перейдите по ссылке из письма', 'code': 'email_not_verified'},
+                ensure_ascii=False,
+            ),
+        }
+    user_id = row[0]
 
     access = read_access(cur, user_id)
     cur.close()
@@ -471,6 +604,10 @@ def handler(event: dict, context) -> dict:
 
     if action in ('register', 'login'):
         return handle_auth(body)
+    if action == 'verify_email':
+        return handle_verify(body)
+    if action == 'resend_verification':
+        return handle_resend(body)
     if action == 'interpret':
         return handle_interpret(body)
     if action == 'spend':

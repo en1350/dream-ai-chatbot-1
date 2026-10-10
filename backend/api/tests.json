@@ -21,6 +21,20 @@
       "expectedStatus": 400
     },
     {
+      "name": "Подтверждение с неверной ссылкой",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "verify_email", "token": "bad"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Повторное письмо без почты",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "resend_verification"},
+      "expectedStatus": 400
+    },
+    {
       "name": "Статус без входа",
       "method": "POST",
       "path": "/",

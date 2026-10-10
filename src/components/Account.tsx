@@ -13,12 +13,25 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const AuthCard = () => {
-  const { login, register, authLoading } = useDreamWallet();
+  const { login, register, resendVerification, authLoading } = useDreamWallet();
   const [mode, setMode] = useState<'register' | 'login'>('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [consent, setConsent] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resending, setResending] = useState(false);
+
+  const resend = async () => {
+    setResending(true);
+    const result = await resendVerification(pendingEmail);
+    setResending(false);
+    if (result.error) {
+      toast({ title: 'Не получилось', description: result.error, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Письмо отправлено', description: 'Проверьте почту, а также папку «Спам».' });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +50,15 @@ const AuthCard = () => {
     }
     const fn = mode === 'login' ? login : register;
     const result = await fn(email, password);
+    if (result.verificationSent) {
+      setPendingEmail(email.trim().toLowerCase());
+      return;
+    }
+    if (result.notVerified) {
+      setPendingEmail(email.trim().toLowerCase());
+      setError(result.error || '');
+      return;
+    }
     if (result.error) {
       setError(result.error);
       return;
@@ -46,6 +68,39 @@ const AuthCard = () => {
       description: `СонникАИ ждёт ваш сон. Бесплатных толкований: ${FREE_DREAMS}.`,
     });
   };
+
+  if (pendingEmail && !error) {
+    return (
+      <div className="mx-auto mt-12 max-w-md rounded-3xl border border-border bg-card/70 p-8 text-center shadow-xl">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/35 bg-primary/10">
+          <Icon name="MailCheck" size={26} className="text-primary" />
+        </span>
+        <h3 className="mt-5 font-display text-2xl">Проверьте почту</h3>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Мы отправили письмо со ссылкой на <span className="text-foreground">{pendingEmail}</span>. Перейдите по ней,
+          и кабинет откроется.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">Не пришло? Загляните в папку «Спам».</p>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={resending}
+          onClick={resend}
+          className="mt-6 h-11 w-full rounded-full"
+        >
+          <Icon name={resending ? 'Loader' : 'RefreshCw'} size={16} className={`mr-2 ${resending ? 'animate-spin' : ''}`} />
+          Отправить письмо ещё раз
+        </Button>
+        <button
+          type="button"
+          onClick={() => setPendingEmail('')}
+          className="mt-4 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Изменить почту
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto mt-12 max-w-md rounded-3xl border border-border bg-card/70 p-8 shadow-xl">
@@ -111,6 +166,16 @@ const AuthCard = () => {
           </label>
         )}
         {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && pendingEmail && (
+          <button
+            type="button"
+            onClick={resend}
+            disabled={resending}
+            className="text-xs text-primary underline underline-offset-2 hover:no-underline"
+          >
+            {resending ? 'Отправляем…' : 'Отправить письмо ещё раз'}
+          </button>
+        )}
         <Button type="submit" disabled={authLoading} className="h-12 w-full rounded-full text-base">
           <Icon
             name={authLoading ? 'Loader' : mode === 'register' ? 'UserPlus' : 'LogIn'}
